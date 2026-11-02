@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import NuevaAudienciaModal from '@/components/NuevaAudienciaModal'
 
@@ -47,7 +47,10 @@ export default function Home() {
   const [selectedDelito, setSelectedDelito] = useState('TODOS')
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
+  
+  // Estado para controlar qué tarjeta tiene desplegado el video embebido
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
+  const playerRef = useRef<any>(null)
 
   const fetchAudiencias = async () => {
     try {
@@ -68,7 +71,76 @@ export default function Home() {
 
   useEffect(() => {
     fetchAudiencias()
+    
+    // Cargar la API oficial de iframe de YouTube
+    if (!window.YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+    }
   }, [])
+
+  // Inicializa el reproductor embebido dinámicamente cuando el usuario despliega la tarjeta
+  const loadYouTubePlayer = (videoId: string) => {
+    setTimeout(() => {
+      if (window.YT && window.YT.Player) {
+        if (playerRef.current) {
+          playerRef.current.destroy()
+        }
+        playerRef.current = new window.YT.Player(`embedded-player-${videoId}`, {
+          height: '100%',
+          width: '100%',
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            modestbranding: 1,
+            rel: 0,
+          },
+        })
+      }
+    }, 300)
+  }
+
+  // Permite saltar a un segundo específico al hacer clic en marcas de tiempo del resumen
+  const jumpToTime = (seconds: number) => {
+    if (playerRef.current && playerRef.current.seekTo) {
+      playerRef.current.seekTo(seconds, true)
+      playerRef.current.playVideo()
+    }
+  }
+
+  const renderInteractiveResumen = (resumenText: string) => {
+    if (!resumenText) return null
+
+    const parts = resumenText.split(/(\[[\d:]+\])/g)
+
+    return parts.map((part, index) => {
+      const match = part.match(/^\[([\d:]+)\]$/)
+      if (match) {
+        const timeStr = match[1]
+        const timeParts = timeStr.split(':').map(Number)
+        let totalSeconds = 0
+        if (timeParts.length === 3) {
+          totalSeconds = timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2]
+        } else if (timeParts.length === 2) {
+          totalSeconds = timeParts[0] * 60 + timeParts[1]
+        }
+
+        return (
+          <button
+            key={index}
+            onClick={() => jumpToTime(totalSeconds)}
+            className="inline-block mx-1 px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded text-xs transition shadow-sm cursor-pointer"
+            title="Hacer clic para saltar a este minuto en el video embebido"
+          >
+            ▶ {timeStr}
+          </button>
+        )
+      }
+      return <span key={index}>{part}</span>
+    })
+  }
 
   const filteredAudiencias = audiencias.filter((aud) => {
     const textoCompleto = `${aud.titulo} ${aud.resumen}`.toLowerCase()
@@ -274,56 +346,36 @@ export default function Home() {
                       )}
 
                       {ytId && (
-                        <>
-                          <a
-                            href={`https://www.youtube.com/watch?v=${ytId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition flex items-center gap-1"
-                          >
-                            🔗 YouTube
-                          </a>
-                          <button
-                            onClick={() => setExpandedVideoId(isExpanded ? null : aud.id)}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition ${
-                              isExpanded
-                                ? 'bg-red-50 text-red-600 border-red-200'
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
-                          >
-                            {isExpanded ? 'Ocultar Video' : '▶ Ver Video Audiencia'}
-                          </button>
-                        </>
+                        <button
+                          onClick={() => {
+                            const nextState = isExpanded ? null : aud.id
+                            setExpandedVideoId(nextState)
+                            if (nextState) {
+                              loadYouTubePlayer(ytId)
+                            }
+                          }}
+                          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg border transition ${
+                            isExpanded
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : 'bg-red-600 text-white hover:bg-red-700 shadow-sm'
+                          }`}
+                        >
+                          {isExpanded ? 'Ocultar Video' : '▶ Ver Video Embebido'}
+                        </button>
                       )}
                     </div>
                   </div>
 
+                  {/* Contenedor del video embebido directamente dentro de la tarjeta */}
                   {isExpanded && ytId && (
-                    <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg border bg-black mt-2 relative group flex items-center justify-center">
-                      <img
-                        src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
-                        alt="Miniatura del video"
-                        className="absolute inset-w-full h-full object-cover opacity-70 w-full h-full"
-                      />
-                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-4">
-                        <a
-                          href={`https://www.youtube.com/watch?v=${ytId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-xl flex items-center gap-2 transition transform hover:scale-105"
-                        >
-                          ▶ Reproducir en YouTube sin restricciones
-                        </a>
-                        <p className="text-white text-xs mt-2 drop-shadow">
-                          (Haz clic para abrir el video de la audiencia en pantalla completa)
-                        </p>
-                      </div>
+                    <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg border bg-black mt-2 relative">
+                      <div id={`embedded-player-${ytId}`} className="w-full h-full" />
                     </div>
                   )}
 
                   {aud.resumen && (
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-xs font-mono text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
-                      {aud.resumen}
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-xs font-mono text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                      {renderInteractiveResumen(aud.resumen)}
                     </div>
                   )}
                 </div>
@@ -340,4 +392,11 @@ export default function Home() {
       />
     </main>
   )
+}
+
+declare global {
+  interface Window {
+    YT: any
+    onYouTubeIframeAPIReady: () => void
+  }
 }

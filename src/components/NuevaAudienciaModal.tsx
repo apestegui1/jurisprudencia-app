@@ -1,3 +1,4 @@
+'vuelve a cargar'
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,8 +10,33 @@ interface Props {
   onSuccess: () => void
 }
 
+function extractYouTubeId(input: string): string {
+  if (!input) return ''
+  const cleanInput = input.trim()
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = cleanInput.match(regExp)
+
+  if (match && match[2].length === 11) {
+    return match[2]
+  }
+  if (cleanInput.length === 11) {
+    return cleanInput
+  }
+  return cleanInput
+}
+
+function parseISO8601Duration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+  if (!match) return 0
+  const hours = parseInt(match[1] || '0', 10)
+  const minutes = parseInt(match[2] || '0', 10)
+  const seconds = parseInt(match[3] || '0', 10)
+  return hours * 3600 + minutes * 60 + seconds
+}
+
 export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
+  const [fetchingYT, setFetchingYT] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   
   const [formData, setFormData] = useState({
@@ -39,6 +65,50 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const handleFetchYouTubeMetadata = async () => {
+    const videoId = extractYouTubeId(formData.youtube_video_id)
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY
+
+    if (!videoId || videoId.length !== 11) {
+      alert('Por favor, ingresa un ID o URL de YouTube válido (11 caracteres).')
+      return
+    }
+
+    if (!apiKey) {
+      alert('Falta configurar NEXT_PUBLIC_YOUTUBE_API_KEY en el archivo .env.local')
+      return
+    }
+
+    try {
+      setFetchingYT(true)
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
+      )
+      const data = await res.json()
+
+      if (data.items && data.items.length > 0) {
+        const item = data.items[0]
+        const ytTitle = item.snippet.title
+        const rawDuration = item.contentDetails.duration
+        const totalSeconds = parseISO8601Duration(rawDuration)
+
+        setFormData((prev) => ({
+          ...prev,
+          youtube_video_id: videoId,
+          duracion_segundos: totalSeconds.toString(),
+          caratula: prev.caratula || ytTitle,
+        }))
+        alert('¡Datos de YouTube obtenidos correctamente!')
+      } else {
+        alert('No se encontró información del video. Verifica el ID y la API Key.')
+      }
+    } catch (err: any) {
+      alert('Error al consultar la API de YouTube: ' + err.message)
+    } finally {
+      setFetchingYT(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -97,12 +167,14 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         ? `[PDF Resolución / Acta: ${pdfUrl}]\n${formData.resumen}` 
         : formData.resumen
 
+      const cleanVideoId = extractYouTubeId(formData.youtube_video_id)
+
       const { error } = await supabase.from('audiencias').insert([
         {
           caso_id: casoIdToUse,
           titulo: `${formData.carpeta} - ${formData.caratula} (${formData.etapa})`,
           fecha_audiencia: formData.fecha_audiencia ? new Date(formData.fecha_audiencia).toISOString() : null,
-          youtube_video_id: formData.youtube_video_id,
+          youtube_video_id: cleanVideoId,
           duracion_segundos: formData.duracion_segundos ? parseInt(formData.duracion_segundos) : null,
           resumen: `[Sede: ${formData.sede_subsede}] [Carpeta: ${formData.carpeta}] [Etapa: ${formData.etapa}] [Delito: ${formData.categoria_delito}] [Juez/a: ${formData.juez}] [Palabras Clave: ${formData.palabras_clave}]\n\n${resumenConPdf}`,
         },
@@ -137,7 +209,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl my-8">
         <h2 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">
-          Alta de Audiencia con Documento PDF
+          Alta de Audiencia con Integración YouTube API
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -285,19 +357,19 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
               </label>
               <input
                 type="number"
-                placeholder="Ej: 3600"
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Ej: 3600 (Autocompletado)"
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
                 value={formData.duracion_segundos}
                 onChange={(e) => setFormData({ ...formData, duracion_segundos: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-                ID o URL del Video de YouTube
-              </label>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              ID o URL del Video de YouTube
+            </label>
+            <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Ej: https://www.youtube.com/watch?v=..."
@@ -305,19 +377,27 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
                 value={formData.youtube_video_id}
                 onChange={(e) => setFormData({ ...formData, youtube_video_id: e.target.value })}
               />
+              <button
+                type="button"
+                onClick={handleFetchYouTubeMetadata}
+                disabled={fetchingYT}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg whitespace-nowrap shadow-sm transition disabled:opacity-50"
+              >
+                {fetchingYT ? 'Consultando...' : '✨ Autocompletar'}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-                Adjuntar Acta / Resolución (PDF)
-              </label>
-              <input
-                type="file"
-                accept="application/pdf"
-                className="w-full border rounded-lg p-1.5 text-xs text-gray-500 bg-white file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+              Adjuntar Acta / Resolución (PDF)
+            </label>
+            <input
+              type="file"
+              accept="application/pdf"
+              className="w-full border rounded-lg p-1.5 text-xs text-gray-500 bg-white file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+            />
           </div>
 
           <div>
