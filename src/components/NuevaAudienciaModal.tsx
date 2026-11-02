@@ -1,4 +1,3 @@
-'vuelve a cargar'
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -37,6 +36,7 @@ function parseISO8601Duration(duration: string): number {
 export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
   const [fetchingYT, setFetchingYT] = useState(false)
+  const [fetchingTranscript, setFetchingTranscript] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   
   const [formData, setFormData] = useState({
@@ -107,6 +107,34 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       alert('Error al consultar la API de YouTube: ' + err.message)
     } finally {
       setFetchingYT(false)
+    }
+  }
+
+  const handleFetchTranscript = async () => {
+    const videoId = extractYouTubeId(formData.youtube_video_id)
+    if (!videoId || videoId.length !== 11) {
+      alert('Ingresa un ID o URL de YouTube válido primero.')
+      return
+    }
+
+    try {
+      setFetchingTranscript(true)
+      const res = await fetch(`/api/transcripcion?videoId=${videoId}`)
+      const data = await res.json()
+
+      if (data.success) {
+        setFormData((prev) => ({
+          ...prev,
+          resumen: prev.resumen ? `${prev.resumen}\n\n${data.transcript}` : data.transcript,
+        }))
+        alert('¡Transcripción obtenida e integrada con éxito!')
+      } else {
+        alert(data.error || 'No se pudo obtener la transcripción.')
+      }
+    } catch (err: any) {
+      alert('Error al conectar con el servidor de transcripciones.')
+    } finally {
+      setFetchingTranscript(false)
     }
   }
 
@@ -209,7 +237,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl my-8">
         <h2 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">
-          Alta de Audiencia con Integración YouTube API
+          Alta de Audiencia con Transcripción Automática
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -401,12 +429,22 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Resumen / Transcripción (para búsqueda de jurisprudencia)
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-xs font-semibold text-gray-700 uppercase">
+                Resumen / Transcripción (para búsqueda de jurisprudencia)
+              </label>
+              <button
+                type="button"
+                onClick={handleFetchTranscript}
+                disabled={fetchingTranscript}
+                className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-md font-semibold transition disabled:opacity-50 flex items-center gap-1"
+              >
+                {fetchingTranscript ? 'Extrayendo...' : '📝 Extraer Transcripción de YouTube'}
+              </button>
+            </div>
             <textarea
               rows={4}
-              placeholder="Pega aquí el contenido del acta o transcripción..."
+              placeholder="Pega aquí el contenido del acta o usa el botón de extracción automática..."
               className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
               value={formData.resumen}
               onChange={(e) => setFormData({ ...formData, resumen: e.target.value })}
