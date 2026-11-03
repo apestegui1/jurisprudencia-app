@@ -31,9 +31,8 @@ export default function Home() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [audienciaAEditar, setAudienciaAEditar] = useState<Audiencia | null>(null)
 
-  // Reproductor de YouTube
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
-  const [activeVideoTitle, setActiveVideoTitle] = useState<string | null>(null)
+  // Reproductor por tarjeta (guardamos el ID de la audiencia que está reproduciendo)
+  const [playingAudienciaId, setPlayingAudienciaId] = useState<string | null>(null)
   const playerRef = useRef<any>(null)
 
   const fetchAudiencias = async () => {
@@ -67,39 +66,40 @@ export default function Home() {
     }
   }, [])
 
-  const handlePlayVideo = (videoId: string, title: string) => {
-    setActiveVideoId(videoId)
-    setActiveVideoTitle(title)
+  const initPlayer = (videoId: string, audienciaId: string) => {
+    const containerId = `youtube-player-${audienciaId}`
+    const container = document.getElementById(containerId)
+    if (!container) return
 
-    const checkYT = setInterval(() => {
-      if ((window as any).YT && (window as any).YT.Player) {
-        clearInterval(checkYT)
-        if (playerRef.current) {
-          try {
-            playerRef.current.loadVideoById(videoId)
-          } catch (e) {
-            initPlayer(videoId)
-          }
-        } else {
-          initPlayer(videoId)
-        }
-      }
-    }, 200)
+    container.innerHTML = ''
+
+    if ((window as any).YT && (window as any).YT.Player) {
+      playerRef.current = new (window as any).YT.Player(containerId, {
+        height: '100%',
+        width: '100%',
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          rel: 0,
+          modestbranding: 1,
+        },
+      })
+    }
   }
 
-  const initPlayer = (videoId: string) => {
-    const element = document.getElementById('youtube-player-container')
-    if (!element) return
+  const handleTogglePlay = (aud: Audiencia) => {
+    if (playingAudienciaId === aud.id) {
+      // Si ya está abierto en esta tarjeta, lo cerramos
+      setPlayingAudienciaId(null)
+      playerRef.current = null
+      return
+    }
 
-    playerRef.current = new (window as any).YT.Player('youtube-player-container', {
-      height: '100%',
-      width: '100%',
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        rel: 0,
-      },
-    })
+    setPlayingAudienciaId(aud.id)
+
+    setTimeout(() => {
+      initPlayer(aud.youtube_video_id, aud.id)
+    }, 300)
   }
 
   const handleSeek = (timeStr: string) => {
@@ -267,29 +267,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Reproductor Flotante Activo */}
-        {activeVideoId && (
-          <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-2xl border border-slate-800 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-base text-slate-100">
-                Reproduciendo: {activeVideoTitle}
-              </h3>
-              <button
-                onClick={() => {
-                  setActiveVideoId(null)
-                  setActiveVideoTitle(null)
-                }}
-                className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition"
-              >
-                Cerrar Reproductor ✕
-              </button>
-            </div>
-            <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-inner">
-              <div id="youtube-player-container" className="w-full h-full" />
-            </div>
-          </div>
-        )}
-
         {/* Listado de Resultados */}
         <div className="space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
@@ -304,12 +281,10 @@ export default function Home() {
             </div>
           ) : (
             filteredAudiencias.map((aud) => {
-              // Parsear PDF adjunto si existe en el resumen
               const pdfMatch = aud.resumen?.match(/\[PDF Resolución \/ Acta:\s*(https?:\/\/[^\]]+)\]/)
               const pdfUrl = pdfMatch ? pdfMatch[1] : null
-
-              // Limpiar texto para mostrar resumen sin metadatos técnicos extensos
               const resumenLimpio = aud.resumen ? aud.resumen.replace(/\[PDF Resolution[^\]]+\]\n?/g, '') : ''
+              const isPlayingThis = playingAudienciaId === aud.id
 
               return (
                 <div key={aud.id} className="bg-white border rounded-2xl p-6 shadow-sm hover:shadow-md transition space-y-4">
@@ -324,10 +299,14 @@ export default function Home() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {aud.youtube_video_id && (
                         <button
-                          onClick={() => handlePlayVideo(aud.youtube_video_id, aud.titulo)}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs rounded-lg transition flex items-center gap-1.5"
+                          onClick={() => handleTogglePlay(aud)}
+                          className={`px-3 py-1.5 font-semibold text-xs rounded-lg transition flex items-center gap-1.5 ${
+                            isPlayingThis
+                              ? 'bg-red-600 text-white hover:bg-red-700'
+                              : 'bg-red-50 hover:bg-red-100 text-red-600'
+                          }`}
                         >
-                          ▶ Reproducir Video
+                          {isPlayingThis ? '✕ Ocultar Video' : '▶ Reproducir Video'}
                         </button>
                       )}
 
@@ -360,6 +339,15 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Reproductor embebido dentro de la tarjeta */}
+                  {isPlayingThis && (
+                    <div className="bg-slate-900 text-white p-4 rounded-xl shadow-inner border border-slate-800 space-y-2 animate-fadeIn">
+                      <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                        <div id={`youtube-player-${aud.id}`} className="w-full h-full" />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Renderizado de transcripción con marcas de tiempo interactivas */}
                   <div className="bg-gray-50 border rounded-xl p-4 text-xs font-mono text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
