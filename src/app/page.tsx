@@ -31,7 +31,7 @@ export default function Home() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [audienciaAEditar, setAudienciaAEditar] = useState<Audiencia | null>(null)
 
-  // Reproductor por tarjeta (guardamos el ID de la audiencia que está reproduciendo)
+  // Reproductor por tarjeta
   const [playingAudienciaId, setPlayingAudienciaId] = useState<string | null>(null)
   const playerRef = useRef<any>(null)
 
@@ -89,7 +89,6 @@ export default function Home() {
 
   const handleTogglePlay = (aud: Audiencia) => {
     if (playingAudienciaId === aud.id) {
-      // Si ya está abierto en esta tarjeta, lo cerramos
       setPlayingAudienciaId(null)
       playerRef.current = null
       return
@@ -102,7 +101,7 @@ export default function Home() {
     }, 300)
   }
 
-  const handleSeek = (timeStr: string) => {
+  const handleSeek = (timeStr: string, aud: Audiencia) => {
     const parts = timeStr.split(':').map(Number)
     let totalSeconds = 0
     if (parts.length === 3) {
@@ -111,9 +110,22 @@ export default function Home() {
       totalSeconds = parts[0] * 60 + parts[1]
     }
 
-    if (playerRef.current && typeof playerRef.current.seekTo === 'function') {
-      playerRef.current.seekTo(totalSeconds, true)
-      playerRef.current.playVideo()
+    if (playingAudienciaId !== aud.id) {
+      setPlayingAudienciaId(aud.id)
+      setTimeout(() => {
+        initPlayer(aud.youtube_video_id, aud.id)
+        setTimeout(() => {
+          if (playerRef.current && typeof playerRef.current.seekTo === 'function') {
+            playerRef.current.seekTo(totalSeconds, true)
+            playerRef.current.playVideo()
+          }
+        }, 800)
+      }, 300)
+    } else {
+      if (playerRef.current && typeof playerRef.current.seekTo === 'function') {
+        playerRef.current.seekTo(totalSeconds, true)
+        playerRef.current.playVideo()
+      }
     }
   }
 
@@ -342,7 +354,7 @@ export default function Home() {
 
                   {/* Reproductor embebido dentro de la tarjeta */}
                   {isPlayingThis && (
-                    <div className="bg-slate-900 text-white p-4 rounded-xl shadow-inner border border-slate-800 space-y-2 animate-fadeIn">
+                    <div className="bg-slate-900 text-white p-4 rounded-xl shadow-inner border border-slate-800 space-y-2">
                       <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
                         <div id={`youtube-player-${aud.id}`} className="w-full h-full" />
                       </div>
@@ -364,7 +376,7 @@ export default function Home() {
                                 return (
                                   <button
                                     key={pIdx}
-                                    onClick={() => handleSeek(timeStr)}
+                                    onClick={() => handleSeek(timeStr, aud)}
                                     className="inline-flex items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold px-1.5 py-0.5 rounded mx-1 transition cursor-pointer"
                                   >
                                     ▶ {timeStr}
