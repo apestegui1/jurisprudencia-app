@@ -361,10 +361,26 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Renderizado de transcripción con marcas de tiempo interactivas */}
+                  {/* Renderizado de transcripción con marcas de tiempo y resaltado de búsqueda */}
                   <div className="bg-gray-50 border rounded-xl p-4 text-xs font-mono text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
                     {resumenLimpio.split('\n').map((line, idx) => {
                       const timeRegex = /\[(\d{2}:\d{2}(?::\d{2})?)\]/g
+
+                      const highlightText = (text: string) => {
+                        if (!searchTerm.trim()) return text
+                        const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+                        const parts = text.split(regex)
+                        return parts.map((part, pIdx) =>
+                          regex.test(part) ? (
+                            <mark key={pIdx} className="bg-yellow-200 text-yellow-900 font-bold px-0.5 rounded">
+                              {part}
+                            </mark>
+                          ) : (
+                            part
+                          )
+                        )
+                      }
+
                       if (timeRegex.test(line)) {
                         const parts = line.split(/(\[\d{2}:\d{2}(?::\d{2})?\])/g)
                         return (
@@ -383,12 +399,12 @@ export default function Home() {
                                   </button>
                                 )
                               }
-                              return <span key={pIdx}>{part}</span>
+                              return <span key={pIdx}>{highlightText(part)}</span>
                             })}
                           </div>
                         )
                       }
-                      return <div key={idx}>{line}</div>
+                      return <div key={idx}>{highlightText(line)}</div>
                     })}
                   </div>
                 </div>
