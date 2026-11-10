@@ -58,7 +58,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
         
         {/* Logo / Encabezado Institucional */}
         <div className="text-center space-y-3">
-          <div className="mx-auto w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 overflow-hidden p-2">
+          <div className="mx-auto w-24 h-24 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 overflow-hidden p-2">
             <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
 
