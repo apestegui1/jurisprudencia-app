@@ -72,7 +72,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
           <div>
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">Acceso al Sistema</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Ingrese su DNI y contraseña (últimos 4 dígitos)
+              Ingrese su DNI y contraseña 
             </p>
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Contraseña (Últimos 4 dígitos)
+              Contraseña
             </label>
             <input
               type="password"
