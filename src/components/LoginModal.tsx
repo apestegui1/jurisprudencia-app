@@ -57,16 +57,11 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
       <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
         
         {/* Logo / Encabezado Institucional */}
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100">
-            {/* Opción A: Si prefieres un ícono SVG de balanza / justicia */}
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006 001M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006 0m0 0l3 9m-3-9h-6m-6 0h6" />
-            </svg>
-            
-            {/* Opción B (Si prefieres usar una imagen tuya en vez del SVG):
+         <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100">
+                        
+             Opción B (Si prefieres usar una imagen tuya en vez del SVG):
                <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" /> 
-            */}
+            
           </div>
 
           <div>
