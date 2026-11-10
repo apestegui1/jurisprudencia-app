@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import NuevaAudienciaModal from '@/components/NuevaAudienciaModal'
 import EditarAudienciaModal from '@/components/EditarAudienciaModal'
+import LoginModal from '@/components/LoginModal'
 
 interface Audiencia {
   id: string
@@ -14,7 +15,16 @@ interface Audiencia {
   resumen: string
 }
 
+interface UsuarioSesion {
+  nombre: string
+  rol: string
+  dni: string
+}
+
 export default function Home() {
+  const [usuario, setUsuario] = useState<UsuarioSesion | null>(null)
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
+
   const [audiencias, setAudiencias] = useState<Audiencia[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -35,6 +45,21 @@ export default function Home() {
   const [playingAudienciaId, setPlayingAudienciaId] = useState<string | null>(null)
   const playerRef = useRef<any>(null)
 
+  // Verificar sesión activa al cargar
+  useEffect(() => {
+    const sesionGuardada = localStorage.getItem('usuario_actual')
+    if (sesionGuardada) {
+      try {
+        setUsuario(JSON.parse(sesionGuardada))
+      } catch (e) {
+        localStorage.removeItem('usuario_actual')
+        setIsLoginOpen(true)
+      }
+    } else {
+      setIsLoginOpen(true)
+    }
+  }, [])
+
   const fetchAudiencias = async () => {
     try {
       setLoading(true)
@@ -53,8 +78,10 @@ export default function Home() {
   }
 
   useEffect(() => {
-    fetchAudiencias()
-  }, [])
+    if (usuario) {
+      fetchAudiencias()
+    }
+  }, [usuario])
 
   // Cargar SDK de YouTube IFrame Player API
   useEffect(() => {
@@ -142,6 +169,12 @@ export default function Home() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('usuario_actual')
+    setUsuario(null)
+    setIsLoginOpen(true)
+  }
+
   // Filtrado de audiencias
   const filteredAudiencias = audiencias.filter((item) => {
     const resumen = item.resumen || ''
@@ -179,6 +212,11 @@ export default function Home() {
     return m ? m[1] : null
   }).filter(Boolean)))
 
+  // Si no hay usuario logueado, sólo mostramos el Modal de Login
+  if (!usuario) {
+    return <LoginModal isOpen={isLoginOpen} onLoginSuccess={(u) => { setUsuario(u); setIsLoginOpen(false); }} />
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 text-gray-800 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -186,6 +224,12 @@ export default function Home() {
         {/* Cabecera */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold uppercase bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">
+                {usuario.rol}
+              </span>
+              <span className="text-xs text-gray-500">Conectado: {usuario.nombre} (DNI: {usuario.dni})</span>
+            </div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
               Buscador de Audiencias y Jurisprudencia
             </h1>
@@ -193,12 +237,22 @@ export default function Home() {
               Consulta registros en video, transcripciones y criterios judiciales oficiales
             </p>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2 whitespace-nowrap"
-          >
-            + Alta de Audiencia
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2 whitespace-nowrap"
+            >
+              + Alta de Audiencia
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-2.5 rounded-xl text-sm transition"
+              title="Cerrar Sesión"
+            >
+              Salir ⎋
+            </button>
+          </div>
         </div>
 
         {/* Panel de Filtros y Búsqueda */}
