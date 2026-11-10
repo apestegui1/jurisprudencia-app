@@ -56,19 +56,21 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
         
+        
         {/* Logo / Encabezado Institucional */}
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-24 h-24 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 overflow-hidden p-2">
-            <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
+<div className="text-center space-y-3">
+  {/* Usamos un ancho y alto más explícito, por ejemplo w-28 h-28 (112px) */}
+  <div className="mx-auto w-28 h-28 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 p-2">
+    <img src="/logo.png" alt="Logo" className="max-h-full max-w-full object-contain" />
+  </div>
 
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Acceso al Sistema</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Ingrese su DNI y contraseña
-            </p>
-          </div>
-        </div>
+  <div>
+    <h2 className="text-xl font-bold text-gray-900 tracking-tight">Acceso al Sistema</h2>
+    <p className="text-xs text-gray-500 mt-0.5">
+      Ingrese su DNI y contraseña
+    </p>
+  </div>
+</div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
