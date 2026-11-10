@@ -36,7 +36,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
       // 2. Validar que la contraseña sean los últimos 4 dígitos del DNI
       const ultimosCuatro = data.dni.slice(-4)
       if (password.trim() !== ultimosCuatro) {
-        alert('Contraseña incorrecta. Recuerde que son los últimos 4 dígitos de su DNI.')
+        alert('Contraseña incorrecta.')
         setLoading(false)
         return
       }
@@ -58,7 +58,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-gray-900">Acceso al Sistema</h2>
           <p className="text-xs text-gray-500">
-            Ingrese su DNI y la contraseña (últimos 4 dígitos de su DNI)
+            Ingrese su DNI y la contraseña 
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Contraseña (Últimos 4 dígitos)
+              Contraseña 
             </label>
             <input
               type="password"
