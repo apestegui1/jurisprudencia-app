@@ -57,17 +57,15 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
       <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl space-y-6">
         
         {/* Logo / Encabezado Institucional */}
-         <div className="mx-auto w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100">
-                        
-             Opción B (Si prefieres usar una imagen tuya en vez del SVG):
-               <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" /> 
-            
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 overflow-hidden p-2">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
 
           <div>
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">Acceso al Sistema</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Ingrese su DNI y contraseña 
+              Ingrese su DNI y contraseña
             </p>
           </div>
         </div>
@@ -110,6 +108,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
             {loading ? 'Validando...' : 'Ingresar al Sistema'}
           </button>
         </form>
+
       </div>
     </div>
   )
