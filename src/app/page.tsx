@@ -239,12 +239,15 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2 whitespace-nowrap"
-            >
-              + Alta de Audiencia
-            </button>
+            {/* Solo Operadores e Instructores pueden dar de alta nuevas audiencias */}
+            {usuario.rol !== 'JUEZ' && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2 whitespace-nowrap"
+              >
+                + Alta de Audiencia
+              </button>
+            )}
             <button
               onClick={handleLogout}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-2.5 rounded-xl text-sm transition"
@@ -387,22 +390,28 @@ export default function Home() {
                         </a>
                       )}
 
-                      <button
-                        onClick={() => {
-                          setAudienciaAEditar(aud)
-                          setIsEditModalOpen(true)
-                        }}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition"
-                      >
-                        ✏️ Editar
-                      </button>
+                      {/* INSTRUCTOR y OPERADOR pueden Editar */}
+                      {(usuario.rol === 'INSTRUCTOR' || usuario.rol === 'OPERADOR') && (
+                        <button
+                          onClick={() => {
+                            setAudienciaAEditar(aud)
+                            setIsEditModalOpen(true)
+                          }}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition"
+                        >
+                          ✏️ Editar
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => handleDelete(aud.id)}
-                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs rounded-lg transition"
-                      >
-                        🗑️ Eliminar
-                      </button>
+                      {/* Únicamente el OPERADOR puede Eliminar */}
+                      {usuario.rol === 'OPERADOR' && (
+                        <button
+                          onClick={() => handleDelete(aud.id)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs rounded-lg transition"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      )}
                     </div>
                   </div>
 
