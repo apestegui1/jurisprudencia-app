@@ -143,6 +143,40 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     setLoading(true)
 
     try {
+      const cleanVideoId = extractYouTubeId(formData.youtube_video_id)
+
+      // 1. VALIDACIÓN DUPLICADO DE YOUTUBE
+      if (cleanVideoId) {
+        const { data: existenteVideo, error: errVideo } = await supabase
+          .from('audiencias')
+          .select('id, resumen')
+          .eq('youtube_video_id', cleanVideoId)
+
+        if (errVideo) throw errVideo
+
+        if (existenteVideo && existenteVideo.length > 0) {
+          alert(`⚠️ Atención: El video de YouTube ingresado ya se encuentra registrado en el sistema.`)
+          setLoading(false)
+          return
+        }
+      }
+
+      // 2. VALIDACIÓN DUPLICADO DE CARPETA (revisando la etiqueta dentro del resumen)
+      if (formData.carpeta.trim()) {
+        const { data: existenteCarpeta, error: errCarpeta } = await supabase
+          .from('audiencias')
+          .select('id, resumen')
+          .ilike('resumen', `%[Carpeta: ${formData.carpeta.trim()}]%`)
+
+        if (errCarpeta) throw errCarpeta
+
+        if (existenteCarpeta && existenteCarpeta.length > 0) {
+          alert(`⚠️ Atención: La carpeta "${formData.carpeta.trim()}" ya cuenta con una audiencia registrada en el sistema.`)
+          setLoading(false)
+          return
+        }
+      }
+
       let pdfUrl = null
 
       if (file) {
@@ -195,12 +229,9 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         ? `[PDF Resolución / Acta: ${pdfUrl}]\n${formData.resumen}` 
         : formData.resumen
 
-      const cleanVideoId = extractYouTubeId(formData.youtube_video_id)
-
       const { error } = await supabase.from('audiencias').insert([
         {
           caso_id: casoIdToUse,
-          titulo: `${formData.carpeta} - ${formData.caratula} (${formData.etapa})`,
           fecha_audiencia: formData.fecha_audiencia ? new Date(formData.fecha_audiencia).toISOString() : null,
           youtube_video_id: cleanVideoId,
           duracion_segundos: formData.duracion_segundos ? parseInt(formData.duracion_segundos) : null,
