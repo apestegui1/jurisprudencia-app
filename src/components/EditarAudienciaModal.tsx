@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { jsPDF } from 'jspdf'
 
 interface Audiencia {
   id: string
@@ -110,6 +111,94 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   }, [audiencia])
 
   if (!isOpen || !audiencia) return null
+
+  const handleDownloadPDF = () => {
+    if (!formData.resumen.trim()) {
+      alert('No hay texto de transcripción para descargar.')
+      return
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    })
+
+    const margenIzquierdo = 20
+    const margenDerecho = 20
+    const anchoUtil = 210 - margenIzquierdo - margenDerecho
+    const altoPagina = 297
+    let y = 25
+
+    // --- ENCABEZADO INSTITUCIONAL ---
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(20, 20, 20)
+    doc.text('ACTA DE TRANSCRIPCIÓN DE AUDIENCIA', margenIzquierdo, y)
+    y += 8
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(70, 70, 70)
+
+    const caratulaTexto = formData.caratula.trim() || 'Sin carátula especificada'
+    const carpetaTexto = formData.carpeta.trim() || 'S/N'
+    const sedeTexto = formData.sede_subsede.trim() || 'No especificada'
+    const juezTexto = formData.juez.trim() || 'No especificado'
+    const fechaFormateada = formData.fecha_audiencia
+      ? new Date(formData.fecha_audiencia).toLocaleString('es-AR')
+      : new Date().toLocaleDateString('es-AR')
+
+    doc.text(`Carátula: ${caratulaTexto}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Carpeta: ${carpetaTexto}  |  Sede: ${sedeTexto}  |  Etapa: ${formData.etapa}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Juez/a: ${juezTexto}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
+    y += 6
+
+    // Línea separadora
+    doc.setDrawColor(180, 180, 180)
+    doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
+    y += 10
+
+    // --- CUERPO DE LA TRANSCRIPCIÓN ---
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.setTextColor(20, 20, 20)
+
+    const lineas = doc.splitTextToSize(formData.resumen, anchoUtil)
+
+    lineas.forEach((linea: string) => {
+      if (y > altoPagina - 25) {
+        doc.addPage()
+        y = 20
+      }
+      doc.text(linea, margenIzquierdo, y)
+      y += 6
+    })
+
+    // --- PIE DE PÁGINA EN TODAS LAS HOJAS ---
+    const totalPaginas = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPaginas; i++) {
+      doc.setPage(i)
+
+      doc.setDrawColor(210, 210, 210)
+      doc.line(margenIzquierdo, altoPagina - 18, 210 - margenDerecho, altoPagina - 18)
+
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+
+      doc.text('Transcripcion realizada en el sistema LEX100', margenIzquierdo, altoPagina - 12)
+      doc.text(`Página ${i} de ${totalPaginas}`, 210 - margenDerecho, altoPagina - 12, {
+        align: 'right',
+      })
+    }
+
+    const baseNombre = formData.carpeta.trim() || formData.caratula.trim() || 'Audiencia'
+    const nombreLimpio = baseNombre.replace(/[^a-zA-Z0-9]/g, '_')
+    doc.save(`Transcripcion_${nombreLimpio}.pdf`)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -344,9 +433,20 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
-              Resumen / Transcripción
-            </label>
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-1">
+              <label className="block text-xs font-semibold text-gray-700 uppercase">
+                Resumen / Transcripción
+              </label>
+              {formData.resumen.trim() && (
+                <button
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  className="text-xs bg-slate-800 text-white hover:bg-slate-700 px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 shadow-sm"
+                >
+                  📄 Descargar Transcripción (PDF)
+                </button>
+              )}
+            </div>
             <textarea
               rows={4}
               className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono text-xs"
