@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient'
 import NuevaAudienciaModal from '@/components/NuevaAudienciaModal'
 import EditarAudienciaModal from '@/components/EditarAudienciaModal'
 import LoginModal from '@/components/LoginModal'
+import { jsPDF } from 'jspdf'
 
 interface Audiencia {
   id: string
@@ -175,6 +176,109 @@ export default function Home() {
     setIsLoginOpen(true)
   }
 
+  // Función para descargar el PDF de la transcripción desde la tarjeta
+  const handleDownloadPDF = (aud: Audiencia) => {
+    const resumenTexto = aud.resumen || ''
+    
+    // Extraer metadatos de las etiquetas guardadas en el resumen
+    const matchSede = resumenTexto.match(/\[Sede:\s*([^\]]+)\]/)
+    const matchCarpeta = resumenTexto.match(/\[Carpeta:\s*([^\]]+)\]/)
+    const matchEtapa = resumenTexto.match(/\[Etapa:\s*([^\]]+)\]/)
+    const matchJuez = resumenTexto.match(/\[Juez\/a:\s*([^\]]+)\]/)
+
+    const sede = matchSede ? matchSede[1] : 'No especificada'
+    const carpeta = matchCarpeta ? matchCarpeta[1] : 'S/N'
+    const etapa = matchEtapa ? matchEtapa[1] : 'Garantias'
+    const juez = matchJuez ? matchJuez[1] : 'No especificado'
+
+    // Limpiar el resumen principal removiendo la cabecera de metadatos o etiquetas PDF
+    const partesResumen = resumenTexto.split('\n\n')
+    const textoLimpio = partesResumen.length > 1 ? partesResumen.slice(1).join('\n\n') : resumenTexto
+
+    if (!textoLimpio.trim()) {
+      alert('Esta audiencia no cuenta con texto de transcripción disponible para descargar.')
+      return
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    })
+
+    const margenIzquierdo = 20
+    const margenDerecho = 20
+    const anchoUtil = 210 - margenIzquierdo - margenDerecho
+    const altoPagina = 297
+    let y = 25
+
+    // --- ENCABEZADO INSTITUCIONAL ---
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(20, 20, 20)
+    doc.text('ACTA DE TRANSCRIPCIÓN DE AUDIENCIA', margenIzquierdo, y)
+    y += 8
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(70, 70, 70)
+
+    const caratulaTexto = aud.titulo || 'Sin carátula especificada'
+    const fechaFormateada = aud.fecha_audiencia
+      ? new Date(aud.fecha_audiencia).toLocaleString('es-AR')
+      : new Date().toLocaleDateString('es-AR')
+
+    doc.text(`Carátula: ${caratulaTexto}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Carpeta: ${carpeta}  |  Sede: ${sede}  |  Etapa: ${etapa}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Juez/a: ${juez}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
+    y += 6
+
+    // Línea separadora
+    doc.setDrawColor(180, 180, 180)
+    doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
+    y += 10
+
+    // --- CUERPO DE LA TRANSCRIPCIÓN ---
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.setTextColor(20, 20, 20)
+
+    const lineas = doc.splitTextToSize(textoLimpio, anchoUtil)
+
+    lineas.forEach((linea: string) => {
+      if (y > altoPagina - 25) {
+        doc.addPage()
+        y = 20
+      }
+      doc.text(linea, margenIzquierdo, y)
+      y += 6
+    })
+
+    // --- PIE DE PÁGINA EN TODAS LAS HOJAS ---
+    const totalPaginas = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPaginas; i++) {
+      doc.setPage(i)
+
+      doc.setDrawColor(210, 210, 210)
+      doc.line(margenIzquierdo, altoPagina - 18, 210 - margenDerecho, altoPagina - 18)
+
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+
+      doc.text('Transcripcion realizada en el sistema LEX100', margenIzquierdo, altoPagina - 12)
+      doc.text(`Página ${i} de ${totalPaginas}`, 210 - margenDerecho, altoPagina - 12, {
+        align: 'right',
+      })
+    }
+
+    const baseNombre = carpeta.trim() !== 'S/N' ? carpeta : caratulaTexto
+    const nombreLimpio = baseNombre.replace(/[^a-zA-Z0-9]/g, '_')
+    doc.save(`Transcripcion_${nombreLimpio}.pdf`)
+  }
+
   // Filtrado de audiencias
   const filteredAudiencias = audiencias.filter((item) => {
     const resumen = item.resumen || ''
@@ -239,7 +343,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Solo Operadores e Instructores pueden dar de alta nuevas audiencias */}
             {usuario.rol !== 'JUEZ' && (
               <button
                 onClick={() => setIsModalOpen(true)}
@@ -379,6 +482,15 @@ export default function Home() {
                         </button>
                       )}
 
+                      {/* Botón de Descarga de Transcripción Directa en PDF */}
+                      <button
+                        onClick={() => handleDownloadPDF(aud)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition flex items-center gap-1.5 shadow-sm"
+                        title="Descargar Transcripción en PDF con pie LEX100"
+                      >
+                        📄 Descargar Transcripción (PDF)
+                      </button>
+
                       {pdfUrl && (
                         <a
                           href={pdfUrl}
@@ -386,11 +498,10 @@ export default function Home() {
                           rel="noopener noreferrer"
                           className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-lg transition flex items-center gap-1.5"
                         >
-                          📄 Ver Acta PDF
+                          📎 Ver Acta Adjunta
                         </a>
                       )}
 
-                      {/* INSTRUCTOR y OPERADOR pueden Editar */}
                       {(usuario.rol === 'INSTRUCTOR' || usuario.rol === 'OPERADOR') && (
                         <button
                           onClick={() => {
@@ -403,7 +514,6 @@ export default function Home() {
                         </button>
                       )}
 
-                      {/* Únicamente el OPERADOR puede Eliminar */}
                       {usuario.rol === 'OPERADOR' && (
                         <button
                           onClick={() => handleDelete(aud.id)}
