@@ -61,7 +61,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }: Props) {
 <div className="text-center space-y-3">
   {/* Usamos un ancho y alto más explícito, por ejemplo w-28 h-28 (112px) */}
   <div className="mx-auto w-28 h-28 bg-blue-50 rounded-2xl flex items-center justify-center shadow-inner border border-blue-100 p-2">
-    <img src="/logo.png" alt="Logo" className="max-h-full max-w-full object-contain" />
+    <img src="/Logo.png" alt="Logo" className="max-h-full max-w-full object-contain" />
   </div>
 
   <div>
