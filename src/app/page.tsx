@@ -176,11 +176,10 @@ export default function Home() {
     setIsLoginOpen(true)
   }
 
-  // Función para descargar el PDF de la transcripción desde la tarjeta
+  // Función para descargar el PDF de la transcripción
   const handleDownloadPDF = (aud: Audiencia) => {
     const resumenTexto = aud.resumen || ''
     
-    // Extraer metadatos de las etiquetas guardadas en el resumen
     const matchSede = resumenTexto.match(/\[Sede:\s*([^\]]+)\]/)
     const matchCarpeta = resumenTexto.match(/\[Carpeta:\s*([^\]]+)\]/)
     const matchEtapa = resumenTexto.match(/\[Etapa:\s*([^\]]+)\]/)
@@ -191,7 +190,6 @@ export default function Home() {
     const etapa = matchEtapa ? matchEtapa[1] : 'Garantias'
     const juez = matchJuez ? matchJuez[1] : 'No especificado'
 
-    // Limpiar el resumen principal removiendo la cabecera de metadatos o etiquetas PDF
     const partesResumen = resumenTexto.split('\n\n')
     const textoLimpio = partesResumen.length > 1 ? partesResumen.slice(1).join('\n\n') : resumenTexto
 
@@ -235,7 +233,6 @@ export default function Home() {
     doc.text(`Juez/a: ${juez}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
     y += 6
 
-    // Línea separadora
     doc.setDrawColor(180, 180, 180)
     doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
     y += 10
@@ -316,7 +313,6 @@ export default function Home() {
     return m ? m[1] : null
   }).filter(Boolean)))
 
-  // Si no hay usuario logueado, sólo mostramos el Modal de Login
   if (!usuario) {
     return <LoginModal isOpen={isLoginOpen} onLoginSuccess={(u) => { setUsuario(u); setIsLoginOpen(false); }} />
   }
@@ -482,15 +478,6 @@ export default function Home() {
                         </button>
                       )}
 
-                      {/* Botón de Descarga de Transcripción Directa en PDF */}
-                      <button
-                        onClick={() => handleDownloadPDF(aud)}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition flex items-center gap-1.5 shadow-sm"
-                        title="Descargar Transcripción en PDF con pie LEX100"
-                      >
-                        📄 Descargar Transcripción (PDF)
-                      </button>
-
                       {pdfUrl && (
                         <a
                           href={pdfUrl}
@@ -579,6 +566,17 @@ export default function Home() {
                       }
                       return <div key={idx}>{highlightText(line)}</div>
                     })}
+                  </div>
+
+                  {/* Botón de Descarga de Transcripción PDF (Estilo Índigo y ubicado abajo de la tarjeta) */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={() => handleDownloadPDF(aud)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2 shadow-sm"
+                      title="Descargar Transcripción en PDF con pie LEX100"
+                    >
+                      📄 Descargar Transcripción (PDF)
+                    </button>
                   </div>
                 </div>
               )
