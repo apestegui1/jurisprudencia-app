@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { jsPDF } from 'jspdf'
 
 interface Props {
   isOpen: boolean
@@ -65,6 +66,94 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const handleDownloadPDF = () => {
+    if (!formData.resumen.trim()) {
+      alert('No hay texto de transcripción para descargar.')
+      return
+    }
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    })
+
+    const margenIzquierdo = 20
+    const margenDerecho = 20
+    const anchoUtil = 210 - margenIzquierdo - margenDerecho
+    const altoPagina = 297
+    let y = 25
+
+    // --- ENCABEZADO INSTITUCIONAL ---
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(20, 20, 20)
+    doc.text('ACTA DE TRANSCRIPCIÓN DE AUDIENCIA', margenIzquierdo, y)
+    y += 8
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(70, 70, 70)
+
+    const caratulaTexto = formData.caratula.trim() || 'Sin carátula especificada'
+    const carpetaTexto = formData.carpeta.trim() || 'S/N'
+    const sedeTexto = formData.sede_subsede.trim() || 'No especificada'
+    const juezTexto = formData.juez.trim() || 'No especificado'
+    const fechaFormateada = formData.fecha_audiencia
+      ? new Date(formData.fecha_audiencia).toLocaleString('es-AR')
+      : new Date().toLocaleDateString('es-AR')
+
+    doc.text(`Carátula: ${caratulaTexto}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Carpeta: ${carpetaTexto}  |  Sede: ${sedeTexto}  |  Etapa: ${formData.etapa}`, margenIzquierdo, y)
+    y += 5
+    doc.text(`Juez/a: ${juezTexto}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
+    y += 6
+
+    // Línea separadora
+    doc.setDrawColor(180, 180, 180)
+    doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
+    y += 10
+
+    // --- CUERPO DE LA TRANSCRIPCIÓN ---
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.setTextColor(20, 20, 20)
+
+    const lineas = doc.splitTextToSize(formData.resumen, anchoUtil)
+
+    lineas.forEach((linea: string) => {
+      if (y > altoPagina - 25) {
+        doc.addPage()
+        y = 20
+      }
+      doc.text(linea, margenIzquierdo, y)
+      y += 6
+    })
+
+    // --- PIE DE PÁGINA EN TODAS LAS HOJAS ---
+    const totalPaginas = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPaginas; i++) {
+      doc.setPage(i)
+
+      doc.setDrawColor(210, 210, 210)
+      doc.line(margenIzquierdo, altoPagina - 18, 210 - margenDerecho, altoPagina - 18)
+
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+
+      doc.text('Transcripcion realizada en el sistema LEX100', margenIzquierdo, altoPagina - 12)
+      doc.text(`Página ${i} de ${totalPaginas}`, 210 - margenDerecho, altoPagina - 12, {
+        align: 'right',
+      })
+    }
+
+    const baseNombre = formData.carpeta.trim() || formData.caratula.trim() || 'Audiencia'
+    const nombreLimpio = baseNombre.replace(/[^a-zA-Z0-9]/g, '_')
+    doc.save(`Transcripcion_${nombreLimpio}.pdf`)
+  }
 
   const handleFetchYouTubeMetadata = async () => {
     const videoId = extractYouTubeId(formData.youtube_video_id)
@@ -161,7 +250,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         }
       }
 
-      // 2. VALIDACIÓN DUPLICADO DE CARPETA (revisando la etiqueta dentro del resumen)
+      // 2. VALIDACIÓN DUPLICADO DE CARPETA
       if (formData.carpeta.trim()) {
         const { data: existenteCarpeta, error: errCarpeta } = await supabase
           .from('audiencias')
@@ -232,7 +321,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       const { error } = await supabase.from('audiencias').insert([
         {
           caso_id: casoIdToUse,
-          titulo: formData.caratula || 'Audiencia General', // <-- CAMBIO CLAVE APLICADO
+          titulo: formData.caratula || 'Audiencia General',
           fecha_audiencia: formData.fecha_audiencia ? new Date(formData.fecha_audiencia).toISOString() : null,
           youtube_video_id: cleanVideoId,
           duracion_segundos: formData.duracion_segundos ? parseInt(formData.duracion_segundos) : null,
@@ -461,18 +550,29 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-1">
               <label className="block text-xs font-semibold text-gray-700 uppercase">
                 Resumen / Transcripción (para búsqueda de jurisprudencia)
               </label>
-              <button
-                type="button"
-                onClick={handleFetchTranscript}
-                disabled={fetchingTranscript}
-                className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-md font-semibold transition disabled:opacity-50 flex items-center gap-1"
-              >
-                {fetchingTranscript ? 'Extrayendo...' : '📝 Extraer Transcripción de YouTube'}
-              </button>
+              <div className="flex items-center gap-2">
+                {formData.resumen.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    className="text-xs bg-slate-800 text-white hover:bg-slate-700 px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 shadow-sm"
+                  >
+                    📄 Descargar Transcripción (PDF)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleFetchTranscript}
+                  disabled={fetchingTranscript}
+                  className="text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-2.5 py-1 rounded-md font-semibold transition disabled:opacity-50 flex items-center gap-1"
+                >
+                  {fetchingTranscript ? 'Extrayendo...' : '📝 Extraer Transcripción de YouTube'}
+                </button>
+              </div>
             </div>
             <textarea
               rows={4}
