@@ -232,6 +232,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       const { error } = await supabase.from('audiencias').insert([
         {
           caso_id: casoIdToUse,
+          titulo: formData.caratula || 'Audiencia General', // <-- CAMBIO CLAVE APLICADO
           fecha_audiencia: formData.fecha_audiencia ? new Date(formData.fecha_audiencia).toISOString() : null,
           youtube_video_id: cleanVideoId,
           duracion_segundos: formData.duracion_segundos ? parseInt(formData.duracion_segundos) : null,
