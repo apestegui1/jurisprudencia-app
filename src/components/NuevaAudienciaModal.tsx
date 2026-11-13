@@ -42,7 +42,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
   
   const [formData, setFormData] = useState({
     sede_subsede: '',
-    carpeta: 'FPO ', // <-- Prefijo inicial por defecto
+    carpeta: 'FPO', // <-- Prefijo sin espacio por defecto
     etapa: 'Garantias',
     caratula: '',
     categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
@@ -61,24 +61,24 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       setFormData((prev) => ({
         ...prev,
         fecha_audiencia: now.toISOString().slice(0, 16),
-        carpeta: prev.carpeta.startsWith('FPO ') ? prev.carpeta : 'FPO ',
+        carpeta: prev.carpeta.startsWith('FPO') ? prev.carpeta : 'FPO',
       }))
     }
   }, [isOpen])
 
   if (!isOpen) return null
 
-  // Función para validar y formatear el campo Carpeta en tiempo real
+  // Función para validar y formatear el campo Carpeta sin espacio tras FPO
   const handleCarpetaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value
 
-    // Forzar que siempre comience con "FPO "
-    if (!valor.startsWith('FPO ')) {
-      valor = 'FPO ' + valor.replace(/^FPO\s*/i, '')
+    // Forzar que siempre comience con "FPO" sin espacio
+    if (!valor.startsWith('FPO')) {
+      valor = 'FPO' + valor.replace(/^FPO\s*/i, '')
     }
 
-    // Permitir únicamente letras F, P, O, espacios, números y barras "/"
-    const limpio = valor.replace(/[^FPO0-9/\s]/gi, '')
+    // Permitir únicamente letras F, P, O, números y barras "/"
+    const limpio = valor.replace(/[^FPO0-9/]/gi, '')
     
     setFormData({ ...formData, carpeta: limpio })
   }
@@ -349,7 +349,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
 
       setFormData({
         sede_subsede: '',
-        carpeta: 'FPO ',
+        carpeta: 'FPO',
         etapa: 'Garantias',
         caratula: '',
         categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
@@ -400,13 +400,13 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
               <input
                 type="text"
                 required
-                placeholder="FPO 1234/2026"
+                placeholder="FPO1234/2026"
                 className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                 value={formData.carpeta}
                 onChange={handleCarpetaChange}
               />
               <span className="text-[10px] text-gray-400 mt-0.5 block">
-                Formato automático: FPO [números]/[año]
+                Formato automático: FPO[números]/[año]
               </span>
             </div>
           </div>
