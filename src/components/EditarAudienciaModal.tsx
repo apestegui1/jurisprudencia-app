@@ -26,8 +26,7 @@ const SEDES_OFICIALES = [
   'Eldorado',
   'Oberá',
   'Puerto Iguazú',
-  'Apóstoles',
-]
+  ]
 
 const JUECES_OFICIALES = [
   'Dr. Juan Pérez',
