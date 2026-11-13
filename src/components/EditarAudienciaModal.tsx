@@ -20,6 +20,22 @@ interface Props {
   audiencia: Audiencia | null
 }
 
+// --- LISTAS OFICIALES CERRADAS ---
+const SEDES_OFICIALES = [
+  'Posadas',
+  'Eldorado',
+  'Oberá',
+  'Puerto Iguazú',
+  'Apóstoles',
+]
+
+const JUECES_OFICIALES = [
+  'Dr. Juan Pérez',
+  'Dra. María González',
+  'Dr. Carlos Alberto Silva',
+  'Dra. Ana Sofía Ramírez',
+]
+
 function extractYouTubeId(input: string): string {
   if (!input) return ''
   const cleanInput = input.trim()
@@ -39,27 +55,13 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   const [loading, setLoading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
 
-  // Listas dinámicas para los selects
-  const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([
-    'Posadas',
-    'Eldorado',
-    'Oberá',
-    'Puerto Iguazú',
-      ])
-  const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
-    'Dr. Juan Pérez',
-    'Dra. María González',
-    'Dr. Carlos Alberto Silva',
-    'Dra. Ana Sofía Ramírez',
-  ])
-
   const [formData, setFormData] = useState({
-    sede_subsede: '',
+    sede_subsede: SEDES_OFICIALES[0],
     carpeta: 'FPO',
     etapa: 'Garantias',
     caratula: '',
     categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
-    juez: '',
+    juez: JUECES_OFICIALES[0],
     palabras_clave: '',
     fecha_audiencia: '',
     duracion_segundos: '',
@@ -68,23 +70,22 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   })
 
   useEffect(() => {
-    if (isOpen) {
-      fetchSedesYJuecesExistentes()
-    }
-
     if (audiencia) {
-      // Intentar extraer metadatos del resumen existente si fueron guardados con formato estándar
       const resumenTexto = audiencia.resumen || ''
       
-      let sede = ''
+      let sede = SEDES_OFICIALES[0]
       let carpeta = 'FPO'
       let etapa = 'Garantias'
       let delito = 'DELITOS CONTRA LAS PERSONAS'
-      let juez = ''
+      let juez = JUECES_OFICIALES[0]
       let palabras = ''
 
       const matchSede = resumenTexto.match(/\[Sede:\s*([^\]]+)\]/)
-      if (matchSede) sede = matchSede[1]
+      if (matchSede && matchSede[1]) {
+        const sedeEncontrada = matchSede[1].trim()
+        // Si la sede existe en la lista oficial, la usa. Si no, asigna la primera por defecto o la respeta si prefieres.
+        sede = SEDES_OFICIALES.includes(sedeEncontrada) ? sedeEncontrada : SEDES_OFICIALES[0]
+      }
 
       const matchCarpeta = resumenTexto.match(/\[Carpeta:\s*([^\]]+)\]/)
       if (matchCarpeta) carpeta = matchCarpeta[1]
@@ -96,12 +97,14 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
       if (matchDelito) delito = matchDelito[1]
 
       const matchJuez = resumenTexto.match(/\[Juez\/a:\s*([^\]]+)\]/)
-      if (matchJuez) juez = matchJuez[1]
+      if (matchJuez && matchJuez[1]) {
+        const juezEncontrado = matchJuez[1].trim()
+        juez = JUECES_OFICIALES.includes(juezEncontrado) ? juezEncontrado : JUECES_OFICIALES[0]
+      }
 
       const matchPalabras = resumenTexto.match(/\[Palabras Clave:\s*([^\]]+)\]/)
       if (matchPalabras) palabras = matchPalabras[1]
 
-      // Limpiar el resumen principal removiendo la cabecera metadatos si la tuviera
       const partesResumen = resumenTexto.split('\n\n')
       const resumenLimpio = partesResumen.length > 1 ? partesResumen.slice(1).join('\n\n') : resumenTexto
 
@@ -126,32 +129,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
         resumen: resumenLimpio,
       })
     }
-  }, [audiencia, isOpen])
-
-  const fetchSedesYJuecesExistentes = async () => {
-    try {
-      const { data, error } = await supabase.from('audiencias').select('resumen')
-      if (error) throw error
-
-      if (data) {
-        const sedesSet = new Set<string>(['Posadas', 'Eldorado', 'Oberá', 'Puerto Iguazú'])
-        const juecesSet = new Set<string>(['Dr. Juan Pérez', 'Dra. María González'])
-
-        data.forEach((item) => {
-          const mSede = item.resumen?.match(/\[Sede:\s*([^\]]+)\]/)
-          if (mSede && mSede[1]) sedesSet.add(mSede[1].trim())
-
-          const mJuez = item.resumen?.match(/\[Juez\/a:\s*([^\]]+)\]/)
-          if (mJuez && mJuez[1]) juecesSet.add(mJuez[1].trim())
-        })
-
-        setSedesDisponibles(Array.from(sedesSet))
-        setJuecesDisponibles(Array.from(juecesSet))
-      }
-    } catch (err) {
-      console.error('Error al cargar opciones dinámicas:', err)
-    }
-  }
+  }, [audiencia])
 
   if (!isOpen || !audiencia) return null
 
@@ -212,7 +190,6 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
     doc.text(`Juez/a: ${juezTexto}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
     y += 6
 
-    // Línea separadora
     doc.setDrawColor(180, 180, 180)
     doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
     y += 10
@@ -328,7 +305,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
                 value={formData.sede_subsede}
                 onChange={(e) => setFormData({ ...formData, sede_subsede: e.target.value })}
               >
-                {sedesDisponibles.map((sede, idx) => (
+                {SEDES_OFICIALES.map((sede, idx) => (
                   <option key={idx} value={sede}>
                     {sede}
                   </option>
@@ -427,7 +404,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
                 value={formData.juez}
                 onChange={(e) => setFormData({ ...formData, juez: e.target.value })}
               >
-                {juecesDisponibles.map((juez, idx) => (
+                {JUECES_OFICIALES.map((juez, idx) => (
                   <option key={idx} value={juez}>
                     {juez}
                   </option>
