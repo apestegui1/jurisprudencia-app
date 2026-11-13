@@ -46,8 +46,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     'Eldorado',
     'Oberá',
     'Puerto Iguazú',
-    'Apóstoles',
-  ])
+      ])
   const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
     'Dr. Juan Pérez',
     'Dra. María González',
