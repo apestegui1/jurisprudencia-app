@@ -41,7 +41,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
 
   const [formData, setFormData] = useState({
     sede_subsede: '',
-    carpeta: '',
+    carpeta: 'FPO',
     etapa: 'Garantias',
     caratula: '',
     categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
@@ -59,7 +59,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
       const resumenTexto = audiencia.resumen || ''
       
       let sede = ''
-      let carpeta = ''
+      let carpeta = 'FPO'
       let etapa = 'Garantias'
       let delito = 'DELITOS CONTRA LAS PERSONAS'
       let juez = ''
@@ -96,7 +96,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
 
       setFormData({
         sede_subsede: sede,
-        carpeta: carpeta,
+        carpeta: carpeta.startsWith('FPO') ? carpeta : 'FPO' + carpeta,
         etapa: etapa,
         caratula: audiencia.titulo ? audiencia.titulo.split(' - ')[1]?.split(' (')[0] || '' : '',
         categoria_delito: delito,
@@ -111,6 +111,19 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   }, [audiencia])
 
   if (!isOpen || !audiencia) return null
+
+  // Función para validar y formatear el campo Carpeta sin espacio tras FPO
+  const handleCarpetaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let valor = e.target.value
+
+    if (!valor.startsWith('FPO')) {
+      valor = 'FPO' + valor.replace(/^FPO\s*/i, '')
+    }
+
+    const limpio = valor.replace(/[^FPO0-9/]/gi, '')
+    
+    setFormData({ ...formData, carpeta: limpio })
+  }
 
   const handleDownloadPDF = () => {
     if (!formData.resumen.trim()) {
@@ -283,10 +296,13 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
               <input
                 type="text"
                 required
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
                 value={formData.carpeta}
-                onChange={(e) => setFormData({ ...formData, carpeta: e.target.value })}
+                onChange={handleCarpetaChange}
               />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">
+                Formato automático: FPO[números]/[año]
+              </span>
             </div>
           </div>
 
@@ -441,7 +457,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
                 <button
                   type="button"
                   onClick={handleDownloadPDF}
-                  className="text-xs bg-slate-800 text-white hover:bg-slate-700 px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 shadow-sm"
+                  className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 shadow-sm"
                 >
                   📄 Descargar Transcripción (PDF)
                 </button>
