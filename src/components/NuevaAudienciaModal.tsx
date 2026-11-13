@@ -79,8 +79,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         carpeta: prev.carpeta.startsWith('FPO') ? prev.carpeta : 'FPO',
       }))
 
-      fetchSedesYJuecesExistentes()
-    }
+      }
   }, [isOpen])
 
   const fetchSedesYJuecesExistentes = async () => {
