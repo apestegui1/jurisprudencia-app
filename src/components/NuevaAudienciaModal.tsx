@@ -10,6 +10,22 @@ interface Props {
   onSuccess: () => void
 }
 
+// --- LISTAS OFICIALES CERRADAS ---
+const SEDES_OFICIALES = [
+  'Posadas',
+  'Eldorado',
+  'Oberá',
+  'Puerto Iguazú',
+  'Apóstoles',
+]
+
+const JUECES_OFICIALES = [
+  'Dr. Juan Pérez',
+  'Dra. María González',
+  'Dr. Carlos Alberto Silva',
+  'Dra. Ana Sofía Ramírez',
+]
+
 function extractYouTubeId(input: string): string {
   if (!input) return ''
   const cleanInput = input.trim()
@@ -39,28 +55,14 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
   const [fetchingYT, setFetchingYT] = useState(false)
   const [fetchingTranscript, setFetchingTranscript] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-
-  // Listas dinámicas para los selects
-  const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([
-    'Posadas',
-    'Eldorado',
-    'Oberá',
-    'Puerto Iguazú',
-      ])
-  const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
-    'Dr. Juan Pérez',
-    'Dra. María González',
-    'Dr. Carlos Alberto Silva',
-    'Dra. Ana Sofía Ramírez',
-  ])
   
   const [formData, setFormData] = useState({
-    sede_subsede: 'Posadas',
+    sede_subsede: SEDES_OFICIALES[0],
     carpeta: 'FPO',
     etapa: 'Garantias',
     caratula: '',
     categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
-    juez: 'Dr. Juan Pérez',
+    juez: JUECES_OFICIALES[0],
     palabras_clave: '',
     fecha_audiencia: '',
     duracion_segundos: '',
@@ -68,7 +70,6 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     resumen: '',
   })
 
-  // Cargar opciones existentes desde la base de datos al abrir el modal
   useEffect(() => {
     if (isOpen) {
       const now = new Date()
@@ -78,34 +79,8 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         fecha_audiencia: now.toISOString().slice(0, 16),
         carpeta: prev.carpeta.startsWith('FPO') ? prev.carpeta : 'FPO',
       }))
-
-      }
-  }, [isOpen])
-
-  const fetchSedesYJuecesExistentes = async () => {
-    try {
-      const { data, error } = await supabase.from('audiencias').select('resumen')
-      if (error) throw error
-
-      if (data) {
-        const sedesSet = new Set<string>(['Posadas', 'Eldorado', 'Oberá', 'Puerto Iguazú'])
-        const juecesSet = new Set<string>(['Dr. Juan Pérez', 'Dra. María González'])
-
-        data.forEach((item) => {
-          const mSede = item.resumen?.match(/\[Sede:\s*([^\]]+)\]/)
-          if (mSede && mSede[1]) sedesSet.add(mSede[1].trim())
-
-          const mJuez = item.resumen?.match(/\[Juez\/a:\s*([^\]]+)\]/)
-          if (mJuez && mJuez[1]) juecesSet.add(mJuez[1].trim())
-        })
-
-        setSedesDisponibles(Array.from(sedesSet))
-        setJuecesDisponibles(Array.from(juecesSet))
-      }
-    } catch (err) {
-      console.error('Error al cargar opciones dinámicas:', err)
     }
-  }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -370,7 +345,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       const { error } = await supabase.from('audiencias').insert([
         {
           caso_id: casoIdToUse,
-          titulo: formData.caratula || 'Audiencia General',
+          titulo: `${formData.carpeta} - ${formData.caratula} (${formData.etapa})`,
           fecha_audiencia: formData.fecha_audiencia ? new Date(formData.fecha_audiencia).toISOString() : null,
           youtube_video_id: cleanVideoId,
           duracion_segundos: formData.duracion_segundos ? parseInt(formData.duracion_segundos) : null,
@@ -381,12 +356,12 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       if (error) throw error
 
       setFormData({
-        sede_subsede: sedesDisponibles[0] || 'Posadas',
+        sede_subsede: SEDES_OFICIALES[0],
         carpeta: 'FPO',
         etapa: 'Garantias',
         caratula: '',
         categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
-        juez: juecesDisponibles[0] || 'Dr. Juan Pérez',
+        juez: JUECES_OFICIALES[0],
         palabras_clave: '',
         fecha_audiencia: '',
         duracion_segundos: '',
@@ -421,7 +396,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
                 value={formData.sede_subsede}
                 onChange={(e) => setFormData({ ...formData, sede_subsede: e.target.value })}
               >
-                {sedesDisponibles.map((sede, idx) => (
+                {SEDES_OFICIALES.map((sede, idx) => (
                   <option key={idx} value={sede}>
                     {sede}
                   </option>
@@ -522,7 +497,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
                 value={formData.juez}
                 onChange={(e) => setFormData({ ...formData, juez: e.target.value })}
               >
-                {juecesDisponibles.map((juez, idx) => (
+                {JUECES_OFICIALES.map((juez, idx) => (
                   <option key={idx} value={juez}>
                     {juez}
                   </option>

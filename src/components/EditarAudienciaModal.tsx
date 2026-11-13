@@ -26,7 +26,8 @@ const SEDES_OFICIALES = [
   'Eldorado',
   'Oberá',
   'Puerto Iguazú',
-  ]
+  'Apóstoles',
+]
 
 const JUECES_OFICIALES = [
   'Dr. Juan Pérez',
@@ -82,7 +83,6 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
       const matchSede = resumenTexto.match(/\[Sede:\s*([^\]]+)\]/)
       if (matchSede && matchSede[1]) {
         const sedeEncontrada = matchSede[1].trim()
-        // Si la sede existe en la lista oficial, la usa. Si no, asigna la primera por defecto o la respeta si prefieres.
         sede = SEDES_OFICIALES.includes(sedeEncontrada) ? sedeEncontrada : SEDES_OFICIALES[0]
       }
 
