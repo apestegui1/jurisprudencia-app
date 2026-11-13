@@ -39,14 +39,29 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
   const [fetchingYT, setFetchingYT] = useState(false)
   const [fetchingTranscript, setFetchingTranscript] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+
+  // Listas dinámicas para los selects
+  const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([
+    'Posadas',
+    'Eldorado',
+    'Oberá',
+    'Puerto Iguazú',
+    'Apóstoles',
+  ])
+  const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
+    'Dr. Juan Pérez',
+    'Dra. María González',
+    'Dr. Carlos Alberto Silva',
+    'Dra. Ana Sofía Ramírez',
+  ])
   
   const [formData, setFormData] = useState({
-    sede_subsede: '',
-    carpeta: 'FPO', // <-- Prefijo sin espacio por defecto
+    sede_subsede: 'Posadas',
+    carpeta: 'FPO',
     etapa: 'Garantias',
     caratula: '',
     categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
-    juez: '',
+    juez: 'Dr. Juan Pérez',
     palabras_clave: '',
     fecha_audiencia: '',
     duracion_segundos: '',
@@ -54,6 +69,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     resumen: '',
   })
 
+  // Cargar opciones existentes desde la base de datos al abrir el modal
   useEffect(() => {
     if (isOpen) {
       const now = new Date()
@@ -63,23 +79,45 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         fecha_audiencia: now.toISOString().slice(0, 16),
         carpeta: prev.carpeta.startsWith('FPO') ? prev.carpeta : 'FPO',
       }))
+
+      fetchSedesYJuecesExistentes()
     }
   }, [isOpen])
 
+  const fetchSedesYJuecesExistentes = async () => {
+    try {
+      const { data, error } = await supabase.from('audiencias').select('resumen')
+      if (error) throw error
+
+      if (data) {
+        const sedesSet = new Set<string>(['Posadas', 'Eldorado', 'Oberá', 'Puerto Iguazú'])
+        const juecesSet = new Set<string>(['Dr. Juan Pérez', 'Dra. María González'])
+
+        data.forEach((item) => {
+          const mSede = item.resumen?.match(/\[Sede:\s*([^\]]+)\]/)
+          if (mSede && mSede[1]) sedesSet.add(mSede[1].trim())
+
+          const mJuez = item.resumen?.match(/\[Juez\/a:\s*([^\]]+)\]/)
+          if (mJuez && mJuez[1]) juecesSet.add(mJuez[1].trim())
+        })
+
+        setSedesDisponibles(Array.from(sedesSet))
+        setJuecesDisponibles(Array.from(juecesSet))
+      }
+    } catch (err) {
+      console.error('Error al cargar opciones dinámicas:', err)
+    }
+  }
+
   if (!isOpen) return null
 
-  // Función para validar y formatear el campo Carpeta sin espacio tras FPO
+  // Validación de carpeta sin espacio tras FPO
   const handleCarpetaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value
-
-    // Forzar que siempre comience con "FPO" sin espacio
     if (!valor.startsWith('FPO')) {
       valor = 'FPO' + valor.replace(/^FPO\s*/i, '')
     }
-
-    // Permitir únicamente letras F, P, O, números y barras "/"
     const limpio = valor.replace(/[^FPO0-9/]/gi, '')
-    
     setFormData({ ...formData, carpeta: limpio })
   }
 
@@ -127,7 +165,6 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     doc.text(`Juez/a: ${juezTexto}  |  Fecha Audiencia: ${fechaFormateada}`, margenIzquierdo, y)
     y += 6
 
-    // Línea separadora
     doc.setDrawColor(180, 180, 180)
     doc.line(margenIzquierdo, y, 210 - margenDerecho, y)
     y += 10
@@ -250,7 +287,6 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
     try {
       const cleanVideoId = extractYouTubeId(formData.youtube_video_id)
 
-      // 1. VALIDACIÓN DUPLICADO DE YOUTUBE
       if (cleanVideoId) {
         const { data: existenteVideo, error: errVideo } = await supabase
           .from('audiencias')
@@ -266,7 +302,6 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
         }
       }
 
-      // 2. VALIDACIÓN DUPLICADO DE CARPETA
       if (formData.carpeta.trim()) {
         const { data: existenteCarpeta, error: errCarpeta } = await supabase
           .from('audiencias')
@@ -348,12 +383,12 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       if (error) throw error
 
       setFormData({
-        sede_subsede: '',
+        sede_subsede: sedesDisponibles[0] || 'Posadas',
         carpeta: 'FPO',
         etapa: 'Garantias',
         caratula: '',
         categoria_delito: 'DELITOS CONTRA LAS PERSONAS',
-        juez: '',
+        juez: juecesDisponibles[0] || 'Dr. Juan Pérez',
         palabras_clave: '',
         fecha_audiencia: '',
         duracion_segundos: '',
@@ -383,14 +418,17 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
               <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 SEDE / Subsede
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Ej: Posadas"
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              <select
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={formData.sede_subsede}
                 onChange={(e) => setFormData({ ...formData, sede_subsede: e.target.value })}
-              />
+              >
+                {sedesDisponibles.map((sede, idx) => (
+                  <option key={idx} value={sede}>
+                    {sede}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -481,14 +519,17 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
               <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 Juez / a
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Ej: Dr. Juan Perez"
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              <select
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={formData.juez}
                 onChange={(e) => setFormData({ ...formData, juez: e.target.value })}
-              />
+              >
+                {juecesDisponibles.map((juez, idx) => (
+                  <option key={idx} value={juez}>
+                    {juez}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -578,7 +619,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
-                    className="text-xs bg-slate-800 text-white hover:bg-slate-700 px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1 shadow-sm"
+                    className="text-xs bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1 shadow-sm"
                   >
                     📄 Descargar Transcripción (PDF)
                   </button>
