@@ -19,10 +19,14 @@ const SEDES_OFICIALES = [
   ]
 
 const JUECES_OFICIALES = [
-  'Dr. Juan Pérez',
-  'Dra. María González',
-  'Dr. Carlos Alberto Silva',
-  'Dra. Ana Sofía Ramírez',
+  'Dr. Marcelo Cardozo',
+  'Dra. María Veronica Skanata',
+  'Dr. Miguel Guerrero',
+  'Dra. Ruth Ponce de Leon',
+  'Dr. Alejandro Gallandat',
+  'Dr. Dr Mario Boldu',
+  'Dra. Mirta Tyden',
+
 ]
 
 function extractYouTubeId(input: string): string {
