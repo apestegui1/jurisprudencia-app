@@ -39,6 +39,21 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   const [loading, setLoading] = useState(false)
   const [file, setFile] = useState<File | null>(null)
 
+  // Listas dinámicas para los selects
+  const [sedesDisponibles, setSedesDisponibles] = useState<string[]>([
+    'Posadas',
+    'Eldorado',
+    'Oberá',
+    'Puerto Iguazú',
+    'Apóstoles',
+  ])
+  const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
+    'Dr. Juan Pérez',
+    'Dra. María González',
+    'Dr. Carlos Alberto Silva',
+    'Dra. Ana Sofía Ramírez',
+  ])
+
   const [formData, setFormData] = useState({
     sede_subsede: '',
     carpeta: 'FPO',
@@ -54,6 +69,10 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
   })
 
   useEffect(() => {
+    if (isOpen) {
+      fetchSedesYJuecesExistentes()
+    }
+
     if (audiencia) {
       // Intentar extraer metadatos del resumen existente si fueron guardados con formato estándar
       const resumenTexto = audiencia.resumen || ''
@@ -108,7 +127,32 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
         resumen: resumenLimpio,
       })
     }
-  }, [audiencia])
+  }, [audiencia, isOpen])
+
+  const fetchSedesYJuecesExistentes = async () => {
+    try {
+      const { data, error } = await supabase.from('audiencias').select('resumen')
+      if (error) throw error
+
+      if (data) {
+        const sedesSet = new Set<string>(['Posadas', 'Eldorado', 'Oberá', 'Puerto Iguazú'])
+        const juecesSet = new Set<string>(['Dr. Juan Pérez', 'Dra. María González'])
+
+        data.forEach((item) => {
+          const mSede = item.resumen?.match(/\[Sede:\s*([^\]]+)\]/)
+          if (mSede && mSede[1]) sedesSet.add(mSede[1].trim())
+
+          const mJuez = item.resumen?.match(/\[Juez\/a:\s*([^\]]+)\]/)
+          if (mJuez && mJuez[1]) juecesSet.add(mJuez[1].trim())
+        })
+
+        setSedesDisponibles(Array.from(sedesSet))
+        setJuecesDisponibles(Array.from(juecesSet))
+      }
+    } catch (err) {
+      console.error('Error al cargar opciones dinámicas:', err)
+    }
+  }
 
   if (!isOpen || !audiencia) return null
 
@@ -280,13 +324,17 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
               <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 SEDE / Subsede
               </label>
-              <input
-                type="text"
-                required
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              <select
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={formData.sede_subsede}
                 onChange={(e) => setFormData({ ...formData, sede_subsede: e.target.value })}
-              />
+              >
+                {sedesDisponibles.map((sede, idx) => (
+                  <option key={idx} value={sede}>
+                    {sede}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -375,13 +423,17 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
               <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
                 Juez / a
               </label>
-              <input
-                type="text"
-                required
-                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              <select
+                className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={formData.juez}
                 onChange={(e) => setFormData({ ...formData, juez: e.target.value })}
-              />
+              >
+                {juecesDisponibles.map((juez, idx) => (
+                  <option key={idx} value={juez}>
+                    {juez}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
