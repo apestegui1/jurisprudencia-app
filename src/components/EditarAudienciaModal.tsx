@@ -45,8 +45,7 @@ export default function EditarAudienciaModal({ isOpen, onClose, onSuccess, audie
     'Eldorado',
     'Oberá',
     'Puerto Iguazú',
-    'Apóstoles',
-  ])
+      ])
   const [juecesDisponibles, setJuecesDisponibles] = useState<string[]>([
     'Dr. Juan Pérez',
     'Dra. María González',
