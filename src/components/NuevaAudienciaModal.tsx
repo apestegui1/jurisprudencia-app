@@ -173,7 +173,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       doc.setFontSize(9)
       doc.setTextColor(100, 100, 100)
 
-      doc.text('Transcripcion realizada en el sistema LEX100', margenIzquierdo, altoPagina - 12)
+      doc.text('Transcripción generada automáticamente por el sistema informático de gestión judicial LEX 100', margenIzquierdo, altoPagina - 12)
       doc.text(`Página ${i} de ${totalPaginas}`, 210 - margenDerecho, altoPagina - 12, {
         align: 'right',
       })
