@@ -170,7 +170,7 @@ export default function NuevaAudienciaModal({ isOpen, onClose, onSuccess }: Prop
       doc.line(margenIzquierdo, altoPagina - 18, 210 - margenDerecho, altoPagina - 18)
 
       doc.setFont('helvetica', 'italic')
-      doc.setFontSize(9)
+      doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
 
       doc.text('Transcripción generada automáticamente por el sistema informático de gestión judicial LEX 100', margenIzquierdo, altoPagina - 12)
