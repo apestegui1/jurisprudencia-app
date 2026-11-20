@@ -32,6 +32,7 @@ const JUECES_OFICIALES = [
   'Dr. Marcelo Cardozo',
   'Dra. María Veronica Skanata',
   'Dr. Miguel Guerrero',
+  'Dr. Fabián Gustavo Cardozo',
   'Dra. Ruth Ponce de Leon',
   'Dr. Alejandro Gallandat',
   'Dr. Dr Mario Boldu',
